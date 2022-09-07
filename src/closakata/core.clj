@@ -14,10 +14,13 @@
   [words]
   (filter #(and
             (>= (count %) min-length)
-            (<= (count %) max-length))
+            (<= (count %) max-length)
+            (not (str/includes? % "-")))
           words))
+
+(def random-word (rand-nth (game-words (get-words))))
 
 (defn -main
   "I don't do a whole lot ... yet."
   [& args]
-  (game))
+  (println "main"))
