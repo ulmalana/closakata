@@ -51,7 +51,8 @@
             (not (str/includes? % "-")))
           words))
 
-(def random-word (rand-nth (game-words (get-words))))
+(def all-words (map str/upper-case (game-words (get-words))))
+(def random-word (rand-nth all-words))
 
 (defn print-with-color
   "Print characters with color"
@@ -70,13 +71,13 @@
           (dorun (for [c seq]
                    (print-with-color
                     (first (filter #(= (:char %) c) valid-keys))))))]
-    (print-seq '[\q \w \e \r \t \y \u \i \o \p])
+    (print-seq '[\Q \W \E \R \T \Y \U \I \O \P])
     (println)
     (print " ")
-    (print-seq '[\a \s \d \f \g \h \j \k \l])
+    (print-seq '[\A \S \D \F \G \H \J \K \L])
     (println)
     (print "  ")
-    (print-seq '[\z \x \c \v \b \n \m])
+    (print-seq '[\Z \X \C \V \B \N \M])
     (println)
     ))
 
@@ -104,7 +105,7 @@
   (cond
     (< (count line) min-length) (println "Kata pilihan terlalu pendek. Coba lagi")
     (> (count line) max-length) (println "Kata pilihan terlalu panjang. Coba lagi")
-    (not (h/word-valid? line (game-words (get-words)))) (println "Kata pilihan tidak dikenali. Coba lagi")
+    (not (h/word-valid? line all-words)) (println "Kata pilihan tidak dikenali. Coba lagi")
     :else
     (do
       (swap! history conj (h/score line @secret))
@@ -115,7 +116,7 @@
       (if (= line @secret)
         (do
           (reset! win true)
-          (println "Kamu menang"))))))
+          (println "Kamu menang!!!!"))))))
 
 (defn game-continue?
   []
@@ -127,19 +128,20 @@
   (reset! valid-keys '[])
   (reset! secret random-word)
 
-  (println "Selamat datang di Closakata")
-  (println "Masukkan kata")
-  (println "Benar=Hijau Hampir=Kuning Terpakai=Abu-abu")
-  (println "Panjang karakter kata rahasia: " (count @secret))
+  (println "--- Selamat datang di Closakata ---")
+  (println "Tebak kata rahasia yang saya punya sekarang!")
+  (println "Keterangan:\nBenar=Hijau Hampir=Kuning Terpakai=Abu-abu")
+  (println "Panjang karakter kata rahasia:" (count @secret))
+  (println "Kamu punya 6 kesempatan untuk menebak.")
 
   (while (game-continue?)
+    (println "###############################################")
     (print (format "Percobaan ke-%d> " (inc (count @history))))
     (flush)
-    (judge (read-line)))
+    (judge (str/upper-case (read-line))))
 
-  (if (not @win) (println "Kamu kalah"))
-  (println "Jawabannya adalah " @secret)
-  )
+  (if (not @win) (println "Kamu kalah!!!"))
+  (println "Jawabannya adalah" @secret))
 
 (defn -main
   "I don't do a whole lot ... yet."

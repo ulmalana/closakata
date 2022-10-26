@@ -12,7 +12,7 @@
          guess just almost)))
 
 (defn word-valid?
-  "validate word"
+  "Cek apakah kata pilihan ada di database"
   [word words]
   (some (partial = word) words))
 
@@ -20,7 +20,7 @@
   "return available keys"
   [history]
   (let [hist (group-by :char (flatten history))
-        keys (map char (range (int \a) (inc (int \z))))]
+        keys (map char (range (int \A) (inc (int \Z))))]
     (map #(cond
             (some :just (hist %)) (array-map :char % :just true :almost false :used false)
             (some :almost (hist %)) (array-map :char % :just false :almost true :used false)
