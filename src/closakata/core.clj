@@ -102,8 +102,9 @@
   "judge the input"
   [line]
   (cond
-    (or (< (count line) min-length) (> (count line) max-length)) (println "Too long/short. please retry")
-    (not (h/word-valid? line (game-words (get-words)))) (println "invalid word. please retry.")
+    (< (count line) min-length) (println "Kata pilihan terlalu pendek. Coba lagi")
+    (> (count line) max-length) (println "Kata pilihan terlalu panjang. Coba lagi")
+    (not (h/word-valid? line (game-words (get-words)))) (println "Kata pilihan tidak dikenali. Coba lagi")
     :else
     (do
       (swap! history conj (h/score line @secret))
@@ -114,7 +115,7 @@
       (if (= line @secret)
         (do
           (reset! win true)
-          (println "You win"))))))
+          (println "Kamu menang"))))))
 
 (defn game-continue?
   []
@@ -127,11 +128,12 @@
   (reset! secret random-word)
 
   (println "Selamat datang di Closakata")
-  (println "masukkan kata")
-  (println "Just=Green Almost=Yellow Used:Grey")
+  (println "Masukkan kata")
+  (println "Benar=Hijau Hampir=Kuning Terpakai=Abu-abu")
+  (println "Panjang karakter kata rahasia: " (count @secret))
 
   (while (game-continue?)
-    (print (format "try[%d]> " (inc (count @history))))
+    (print (format "Percobaan ke-%d> " (inc (count @history))))
     (flush)
     (judge (read-line)))
 
@@ -142,4 +144,4 @@
 (defn -main
   "I don't do a whole lot ... yet."
   [& args]
-  (println "main"))
+  (game-cli))
