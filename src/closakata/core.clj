@@ -52,7 +52,7 @@
           words))
 
 (def all-words (map str/upper-case (game-words (get-words))))
-(def random-word (rand-nth all-words))
+(defn random-word [] (rand-nth all-words))
 
 (defn print-with-color
   "Print characters with color"
@@ -96,10 +96,10 @@
 
 (defonce history (atom '[]))
 (defonce valid-keys (atom '[]))
-(defonce secret (atom nil))
+(def secret (atom nil))
 (defonce win (atom false))
 
-(defn judge
+(defn check-guess
   "judge the input"
   [line]
   (cond
@@ -118,32 +118,46 @@
           (reset! win true)
           (println "Kamu menang!!!!"))))))
 
-(defn game-continue?
-  []
+(defn game-loop? []
+  (print "Main lagi? y/n: ")
+  (flush)
+  (let [respon (read-line)]
+    (or (= respon "y") (= respon "Y"))))
+
+
+(defn has-chance? []
   (and (< (count @history) 6) (not @win)))
 
-(defn game-cli
-  []
+(defn game []
   (reset! history '[])
   (reset! valid-keys '[])
-  (reset! secret random-word)
+  (reset! secret (random-word))
 
-  (println "--- Selamat datang di Closakata ---")
-  (println "Tebak kata rahasia yang saya punya sekarang!")
-  (println "Keterangan:\nBenar=Hijau Hampir=Kuning Terpakai=Abu-abu")
   (println "Panjang karakter kata rahasia:" (count @secret))
-  (println "Kamu punya 6 kesempatan untuk menebak.")
 
-  (while (game-continue?)
+  (while (has-chance?)
     (println "###############################################")
     (print (format "Percobaan ke-%d> " (inc (count @history))))
     (flush)
-    (judge (str/upper-case (read-line))))
+    (check-guess (str/upper-case (read-line))))
 
-  (if (not @win) (println "Kamu kalah!!!"))
-  (println "Jawabannya adalah" @secret))
+  (when (not @win) (println "Kamu kalah!!!"))
+  (println "Jawabannya adalah" @secret)
+  ;(println "win:" @win)
+  ;(println "history:" @history)
+
+  (when (game-loop?)
+    (reset! win false)
+    ;(reset! secret random-word)
+    (recur)))
 
 (defn -main
   "I don't do a whole lot ... yet."
   [& args]
-  (game-cli))
+  (println "--- Selamat datang di Closakata ---")
+  (println "Tebak kata rahasia yang saya punya sekarang!")
+  (println "Keterangan:\nBenar=Hijau Hampir=Kuning Terpakai=Abu-abu")
+  (println "Kamu punya 6 kesempatan untuk menebak.")
+
+  (game)
+  (println "Selamat tinggal."))
