@@ -3,64 +3,44 @@
             [closakata.helper :as h])
   (:gen-class))
 
-;; TODO: histories are printed using the length of chosen word.
-;; if the chosen word is adan, then adalah wil be adal.
-
 (def max-length 8)
 (def min-length 4)
 
-(def console-fg-color
-  {
-   :grey    "\u001b[90m"
-   :black   "\u001b[30m"
-   :red     "\u001b[31m"
-   :green   "\u001b[32m"
-   :yellow  "\u001b[33m"
-   :blue    "\u001b[34m"
-   :magenta "\u001b[35m"
-   :cyan    "\u001b[36m"
-   :white   "\u001b[37m"
-   :reset   "\u001b[0m"
-   })
+(defonce history (atom '[]))
+(defonce valid-keys (atom '[]))
+(def secret (atom nil))
+(defonce win (atom false))
 
-(def console-bg-color
-  {
-   :grey    "\u001b[100m"
-   :black   "\u001b[40m"
-   :red     "\u001b[41m"
-   :green   "\u001b[42m"
-   :yellow  "\u001b[43m"
-   :blue    "\u001b[44m"
-   :magenta "\u001b[45m"
-   :cyan    "\u001b[46m"
-   :white   "\u001b[47m"
-   :reset   "\u001b[49m"
-   })
-
-
-(defn get-words
-  []
-  (-> (slurp "resources/daftar-kata.txt")
+;; word dictionary
+(def get-words
+  (-> (slurp "resources/daftar-kata-bahasa-indonesia.txt")
       str/split-lines))
 
+
 (defn game-words
+  "This function extracts all qualified words from the dictionary"
   [words]
   (filter #(and
-            (>= (count %) min-length)
-            (<= (count %) max-length)
-            (not (str/includes? % "-")))
+            (>= (count %) min-length) ; word should be geq than min-length
+            (<= (count %) max-length) ; word should be leq than max-length
+            (not (str/includes? % "-"))) ; word should not contain - character, which is normal in indonesian
           words))
 
-(def all-words (map str/upper-case (game-words (get-words))))
-(defn random-word [] (rand-nth all-words))
+;; uppercased qualified words
+(def all-words (map str/upper-case (game-words get-words)))
+
+(defn random-word
+  "Pick a random word from qualified words"
+  []
+  (rand-nth all-words))
 
 (defn print-with-color
   "Print characters with color"
   [c]
   (cond
-    (:just c) (print (format "%s%s%s" (:green console-fg-color) (:char c) (:reset console-fg-color)))
-    (:almost c) (print (format "%s%s%s" (:yellow console-fg-color) (:char c) (:reset console-fg-color)))
-    (:used c) (print (format "%s%s%s" (:grey console-fg-color) (:char c) (:reset console-fg-color)))
+    (:just c) (print (format "%s%s%s" (:green h/console-fg-color) (:char c) (:reset h/console-fg-color)))
+    (:almost c) (print (format "%s%s%s" (:yellow h/console-fg-color) (:char c) (:reset h/console-fg-color)))
+    (:used c) (print (format "%s%s%s" (:grey h/console-fg-color) (:char c) (:reset h/console-fg-color)))
     :else (print (format "%s" (:char c)))))
 
 (defn print-keyboard
@@ -78,8 +58,7 @@
     (println)
     (print "  ")
     (print-seq '[\Z \X \C \V \B \N \M])
-    (println)
-    ))
+    (println)))
 
 (defn print-history
   "print history with color"
@@ -94,70 +73,77 @@
              (println))
           history))))
 
-(defonce history (atom '[]))
-(defonce valid-keys (atom '[]))
-(def secret (atom nil))
-(defonce win (atom false))
 
 (defn check-guess
-  "judge the input"
+  "This function validates and checks the user's guess."
   [line]
   (cond
+    ;; check the guess word length and whether it is a recognized word
     (< (count line) min-length) (println "Kata pilihan terlalu pendek. Coba lagi")
     (> (count line) max-length) (println "Kata pilihan terlalu panjang. Coba lagi")
     (not (h/word-valid? line all-words)) (println "Kata pilihan tidak dikenali. Coba lagi")
+
+    ;; if valid and recognized
     :else
     (do
-      (swap! history conj (h/score line @secret))
-      (reset! valid-keys (h/available-keys @history))
+      (swap! history conj (h/score line @secret)) ; compare guess to secret and put guess in history
+      (reset! valid-keys (h/available-keys @history)) ; compute un-guessed characters based on the history
       (print-keyboard @valid-keys)
       (println)
       (print-history @history)
-      (if (= line @secret)
+      (if (= line @secret) ; if guess = secret
         (do
           (reset! win true)
           (println "Kamu menang!!!!"))))))
 
-(defn game-loop? []
+(defn play-again?
+  "This function prompts the user for a new session
+  return true as long as the user's answer is either y or Y"
+  []
   (print "Main lagi? y/n: ")
   (flush)
   (let [respon (read-line)]
     (or (= respon "y") (= respon "Y"))))
 
 
-(defn has-chance? []
-  (and (< (count @history) 6) (not @win)))
+(defn has-chance?
+  "This function checks if the user still has chance to guess"
+  []
+  (and (< (count @history) (dec (count @secret))) (not @win)))
 
-(defn game []
+(defn game
+  "game's backbone"
+  []
   (reset! history '[])
   (reset! valid-keys '[])
-  (reset! secret (random-word))
+  (reset! secret (random-word)) ; pick a different secret word for every game session
+  (def secret-length (count @secret))
 
-  (println "Panjang karakter kata rahasia:" (count @secret))
+  (println "Panjang karakter kata rahasia:" secret-length)
+  (println (str "Kamu punya " (dec secret-length) " kesempatan untuk menebak."))
 
   (while (has-chance?)
     (println "###############################################")
     (print (format "Percobaan ke-%d> " (inc (count @history))))
     (flush)
-    (check-guess (str/upper-case (read-line))))
+    (check-guess (str/upper-case (read-line)))) ; check the input, is it valid? is it correct?
 
   (when (not @win) (println "Kamu kalah!!!"))
   (println "Jawabannya adalah" @secret)
-  ;(println "win:" @win)
-  ;(println "history:" @history)
 
-  (when (game-loop?)
-    (reset! win false)
-    ;(reset! secret random-word)
+  (when (play-again?)
+    (reset! win false) ; if the user want to play again, set win to false
     (recur)))
 
 (defn -main
-  "I don't do a whole lot ... yet."
+  "Main entry"
   [& args]
   (println "--- Selamat datang di Closakata ---")
-  (println "Tebak kata rahasia yang saya punya sekarang!")
+  (println (str "Aku akan memilih kata dalam Bahasa Indonesia yang panjangnya " min-length " sampai " max-length " karakter."))
+  (println "Kamu punya n-1 kesempatan untuk menebak, yang mana n adalah panjang kata rahasia.")
+  (println "Tebak kata rahasia yang aku punya sekarang!")
+  (println)
   (println "Keterangan:\nBenar=Hijau Hampir=Kuning Terpakai=Abu-abu")
-  (println "Kamu punya 6 kesempatan untuk menebak.")
-
+  (println "----------------------------------")
   (game)
-  (println "Selamat tinggal."))
+  (println "Sampai ketemu lagi!."))
